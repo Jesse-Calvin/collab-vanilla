@@ -22,115 +22,115 @@
   <canvas id="canvas" width="800" height="600"></canvas>
 
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    
-    let isDrawing = false;
-    let currentStroke = [];
-    let color = "#000000";
-    
-    // Connect to backend WebSocket
-    const socket = new WebSocket("https://collab-app-backend-production.up.railway.app/ws");
-    
-    socket.onopen = () => console.log("WebSocket connected");
-    socket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-    
-        if (msg.type === "start") {
-            currentStroke = [{ x: msg.x, y: msg.y, color: msg.color }];
-        } 
-        else if (msg.type === "draw") {
-            currentStroke.push({ x: msg.x, y: msg.y, color: msg.color });
-            drawStroke(currentStroke);
-        } 
-        else if (msg.type === "endStroke") {
-            currentStroke = [];
-        } 
-        else if (msg.type === "clear") {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-    };
-    
-    // Get position for mouse or touch
-    function getPos(e) {
-        const rect = canvas.getBoundingClientRect();
-        if (e.touches) {
-            return {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top
-            };
-        } else {
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-        }
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let isDrawing = false;
+let currentStroke = [];
+let color = "#000000";
+
+// Connect to backend WebSocket
+const socket = new WebSocket("https://collab-app-backend-production.up.railway.app/ws");
+
+socket.onopen = () => console.log("✅ WebSocket connected");
+socket.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === "start") {
+        currentStroke = [{ x: msg.x, y: msg.y, color: msg.color }];
+    } 
+    else if (msg.type === "draw") {
+        currentStroke.push({ x: msg.x, y: msg.y, color: msg.color });
+        drawStroke(currentStroke);
+    } 
+    else if (msg.type === "endStroke") {
+        currentStroke = [];
+    } 
+    else if (msg.type === "clear") {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-    
-    function startDrawing(e) {
-        e.preventDefault();
-        const pos = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-    
-        isDrawing = true;
-        currentStroke = [{ x: pos.x, y: pos.y, color }];
-        send({ type: "start", x: pos.x, y: pos.y, color });
+};
+
+// Get position for mouse or touch
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+        return {
+            x: e.touches[0].clientX - rect.left,
+            y: e.touches[0].clientY - rect.top
+        };
+    } else {
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
     }
-    
-    function draw(e) {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const pos = getPos(e);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    
-        currentStroke.push({ x: pos.x, y: pos.y, color });
-        send({ type: "draw", x: pos.x, y: pos.y, color });
+}
+
+function startDrawing(e) {
+    e.preventDefault();
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    isDrawing = true;
+    currentStroke = [{ x: pos.x, y: pos.y, color }];
+    send({ type: "start", x: pos.x, y: pos.y, color });
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+
+    currentStroke.push({ x: pos.x, y: pos.y, color });
+    send({ type: "draw", x: pos.x, y: pos.y, color });
+}
+
+function stopDrawing(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    isDrawing = false;
+    send({ type: "endStroke" });
+}
+
+function drawStroke(stroke) {
+    if (stroke.length < 2) return;
+    ctx.beginPath();
+    ctx.strokeStyle = stroke[0].color;
+    ctx.lineWidth = 2;
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
     }
-    
-    function stopDrawing(e) {
-        if (!isDrawing) return;
-        e.preventDefault();
-        isDrawing = false;
-        send({ type: "endStroke" });
+    ctx.stroke();
+}
+
+function send(data) {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(data));
     }
-    
-    function drawStroke(stroke) {
-        if (stroke.length < 2) return;
-        ctx.beginPath();
-        ctx.strokeStyle = stroke[0].color;
-        ctx.lineWidth = 2;
-        ctx.moveTo(stroke[0].x, stroke[0].y);
-        for (let i = 1; i < stroke.length; i++) {
-            ctx.lineTo(stroke[i].x, stroke[i].y);
-        }
-        ctx.stroke();
-    }
-    
-    function send(data) {
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(data));
-        }
-    }
-    
-    // Event listeners for mouse
-    canvas.addEventListener("mousedown", startDrawing);
-    canvas.addEventListener("mousemove", draw);
-    canvas.addEventListener("mouseup", stopDrawing);
-    
-    // Event listeners for touch
-    canvas.addEventListener("touchstart", startDrawing);
-    canvas.addEventListener("touchmove", draw);
-    canvas.addEventListener("touchend", stopDrawing);
-    
-    // Color picker
-    document.getElementById("colorPicker").addEventListener("input", (e) => {
-        color = e.target.value;
-    });
-    </script>
-    
+}
+
+// Event listeners for mouse
+canvas.addEventListener("mousedown", startDrawing);
+canvas.addEventListener("mousemove", draw);
+canvas.addEventListener("mouseup", stopDrawing);
+
+// Event listeners for touch
+canvas.addEventListener("touchstart", startDrawing);
+canvas.addEventListener("touchmove", draw);
+canvas.addEventListener("touchend", stopDrawing);
+
+// Color picker
+document.getElementById("colorPicker").addEventListener("input", (e) => {
+    color = e.target.value;
+});
+</script>
+
 </body>
 </html>
