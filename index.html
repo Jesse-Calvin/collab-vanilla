@@ -1,154 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Let's CollabO Drawing App (Vanilla JS)</title>
-  <link rel="stylesheet" href="labstyle.css" />
+  <meta charset="UTF-8">
+  <title>Collaborative Drawing</title>
+  <link rel="stylesheet" href="labstyle.css">
+  <style>
+    canvas { border: 1px solid black; display: block; margin-bottom: 10px; }
+    #controls { margin-bottom: 10px; }
+    button { margin-right: 10px; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Let's CollabO Drawing App (Vanilla JS)</h2>
+  <h2>Collaborative Drawing</h2>
 
-    <div class="controls">
-      <input type="color" id="colorPicker" value="#000000" />
-      <button id="undoBtn">Undo</button>
-      <button id="clearBtn">Clear</button>
-    </div>
-
-    <canvas id="drawCanvas" width="800" height="600"></canvas>
+  <div id="controls">
+    <input type="color" id="color" value="#000000">
+    <button id="undoBtn">Undo</button>
+    <button id="clearBtn">Clear</button>
   </div>
 
-  <script>
-    const canvas = document.getElementById("drawCanvas");
-    const ctx = canvas.getContext("2d");
-    const colorPicker = document.getElementById("colorPicker");
-    const undoBtn = document.getElementById("undoBtn");
-    const clearBtn = document.getElementById("clearBtn");
+  <canvas id="canvas" width="800" height="600"></canvas>
 
-    let drawing = false;
-    let strokes = [];
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    
+    let isDrawing = false;
     let currentStroke = [];
     let color = "#000000";
-
+    
+    // Connect to backend WebSocket
     const socket = new WebSocket("https://collab-app-backend-production.up.railway.app/ws");
-
+    
+    socket.onopen = () => console.log("WebSocket connected");
     socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-
-      if (msg.type === "start") {
-        currentStroke = [{ x: msg.x, y: msg.y, color: msg.color }];
-      } else if (msg.type === "draw") {
-        currentStroke.push({ x: msg.x, y: msg.y, color: msg.color });
-        drawStroke(currentStroke);
-      } else if (msg.type === "endStroke") {
-        strokes.push(currentStroke);
-        currentStroke = [];
-      } else if (msg.type === "undo") {
-        strokes.pop();
-        redrawAll();
-      } else if (msg.type === "clear") {
-        strokes = [];
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+        const msg = JSON.parse(event.data);
+    
+        if (msg.type === "start") {
+            currentStroke = [{ x: msg.x, y: msg.y, color: msg.color }];
+        } 
+        else if (msg.type === "draw") {
+            currentStroke.push({ x: msg.x, y: msg.y, color: msg.color });
+            drawStroke(currentStroke);
+        } 
+        else if (msg.type === "endStroke") {
+            currentStroke = [];
+        } 
+        else if (msg.type === "clear") {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
     };
-
-    const send = (data) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(data));
-      }
-    };
-
-    const getPos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top
-        };
-      } else {
-        return {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        };
-      }
-    };
-
-    const startDrawing = (e) => {
-      e.preventDefault();
-      drawing = true;
-      const pos = getPos(e);
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      currentStroke = [{ x: pos.x, y: pos.y, color }];
-      send({ type: "start", x: pos.x, y: pos.y, color });
-    };
-
-    const draw = (e) => {
-      if (!drawing) return;
-      e.preventDefault();
-      const pos = getPos(e);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-      currentStroke.push({ x: pos.x, y: pos.y, color });
-      send({ type: "draw", x: pos.x, y: pos.y, color });
-    };
-
-    const stopDrawing = (e) => {
-      if (!drawing) return;
-      drawing = false;
-      e.preventDefault();
-      strokes.push(currentStroke);
-      send({ type: "endStroke" });
-      currentStroke = [];
-    };
-
-    const drawStroke = (stroke) => {
-      if (stroke.length < 2) return;
-      ctx.beginPath();
-      ctx.strokeStyle = stroke[0].color;
-      ctx.lineWidth = 2;
-      ctx.moveTo(stroke[0].x, stroke[0].y);
-      for (let i = 1; i < stroke.length; i++) {
-        ctx.lineTo(stroke[i].x, stroke[i].y);
-      }
-      ctx.stroke();
-    };
-
-    const redrawAll = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      strokes.forEach((stroke) => drawStroke(stroke));
-    };
-
-    colorPicker.addEventListener("input", (e) => {
-      color = e.target.value;
-    });
-
-    undoBtn.addEventListener("click", () => {
-      strokes.pop();
-      redrawAll();
-      send({ type: "undo" });
-    });
-
-    clearBtn.addEventListener("click", () => {
-      strokes = [];
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      send({ type: "clear" });
-    });
-
-    // Mouse events
+    
+    // Get position for mouse or touch
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches) {
+            return {
+                x: e.touches[0].clientX - rect.left,
+                y: e.touches[0].clientY - rect.top
+            };
+        } else {
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+    }
+    
+    function startDrawing(e) {
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+    
+        isDrawing = true;
+        currentStroke = [{ x: pos.x, y: pos.y, color }];
+        send({ type: "start", x: pos.x, y: pos.y, color });
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    
+        currentStroke.push({ x: pos.x, y: pos.y, color });
+        send({ type: "draw", x: pos.x, y: pos.y, color });
+    }
+    
+    function stopDrawing(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        isDrawing = false;
+        send({ type: "endStroke" });
+    }
+    
+    function drawStroke(stroke) {
+        if (stroke.length < 2) return;
+        ctx.beginPath();
+        ctx.strokeStyle = stroke[0].color;
+        ctx.lineWidth = 2;
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) {
+            ctx.lineTo(stroke[i].x, stroke[i].y);
+        }
+        ctx.stroke();
+    }
+    
+    function send(data) {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(data));
+        }
+    }
+    
+    // Event listeners for mouse
     canvas.addEventListener("mousedown", startDrawing);
     canvas.addEventListener("mousemove", draw);
     canvas.addEventListener("mouseup", stopDrawing);
-    canvas.addEventListener("mouseout", stopDrawing);
-
-    // Touch events
+    
+    // Event listeners for touch
     canvas.addEventListener("touchstart", startDrawing);
     canvas.addEventListener("touchmove", draw);
     canvas.addEventListener("touchend", stopDrawing);
-    canvas.addEventListener("touchcancel", stopDrawing);
-  </script>
+    
+    // Color picker
+    document.getElementById("colorPicker").addEventListener("input", (e) => {
+        color = e.target.value;
+    });
+    </script>
+    
 </body>
 </html>

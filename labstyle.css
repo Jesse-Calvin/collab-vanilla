@@ -1,61 +1,63 @@
 body {
-  font-family: sans-serif;
-  text-align: center;
   margin: 0;
-  padding: 0;
-  background-color: #f5f5f5;
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 h2 {
-  margin: 15px 0;
-  font-size: 1.5rem;
-}
-
-.controls {
   margin-bottom: 10px;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  color: #333;
 }
 
-.controls input[type="color"],
-.controls button {
-  padding: 6px 10px;
-  font-size: 14px;
+#room-form, #controls {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+input[type="color"] {
+  height: 40px;
+  width: 40px;
   border: none;
   cursor: pointer;
-  border-radius: 5px;
 }
 
-.controls button {
-  background-color: #444;
+input[type="text"] {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
   color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-.controls button:hover {
-  background-color: #222;
+button:hover {
+  background-color: #0056b3;
 }
 
 canvas {
   border: 2px solid #333;
   background-color: white;
-  touch-action: none; /* important for mobile drawing */
-  max-width: 100%;
-  height: auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Mobile-friendly adjustments */
-@media (max-width: 768px) {
-  h2 {
-    font-size: 1.2rem;
-  }
-  .controls {
-    flex-direction: column;
-    align-items: center;
-  }
+@media (max-width: 600px) {
   canvas {
-    width: 95vw;
-    height: 70vh;
+    width: 100%;
+    height: auto;
   }
 }
