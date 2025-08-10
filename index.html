@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Collaborative Drawing</title>
+  <link rel="stylesheet" href="labstyle.css">
+  <style>
+    canvas { border: 1px solid black; display: block; margin-bottom: 10px; }
+    #controls { margin-bottom: 10px; }
+    button { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Collaborative Drawing</h2>
+
+  <div id="controls">
+    <input type="color" id="color" value="#000000">
+    <button id="undoBtn">Undo</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <canvas id="canvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('color');
+    const undoBtn = document.getElementById('undoBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let drawing = false;
+    let currentColor = colorPicker.value;
+    let currentStroke = [];
+    let strokes = [];
+
+    const socket = new WebSocket("ws://localhost:8000/ws");
+
+    socket.onopen = () => {
+      console.log("WebSocket connected!");
+    };
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === "start") {
+        currentStroke = [{ x: message.x, y: message.y, color: message.color }];
+      } else if (message.type === "draw") {
+        currentStroke.push({ x: message.x, y: message.y, color: message.color });
+        drawLine(currentStroke);
+      } else if (message.type === "endStroke") {
+        strokes.push(currentStroke);
+        currentStroke = [];
+      } else if (message.type === "clear") {
+        strokes = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      } else if (message.type === "undo") {
+        strokes.pop();
+        redrawAll();
+      }
+    };
+
+    colorPicker.addEventListener('input', (e) => {
+      currentColor = e.target.value;
+    });
+
+    undoBtn.addEventListener('click', () => {
+      strokes.pop();
+      redrawAll();
+      sendMessage({ type: "undo" });
+    });
+
+    clearBtn.addEventListener('click', () => {
+      strokes = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      sendMessage({ type: "clear" });
+    });
+
+    function sendMessage(data) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(data));
+      }
+    }
+
+    function drawLine(stroke) {
+      if (stroke.length < 2) return;
+      ctx.beginPath();
+      ctx.strokeStyle = stroke[0].color;
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function redrawAll() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const stroke of strokes) {
+        drawLine(stroke);
+      }
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+      drawing = true;
+      const pos = getPos(e);
+      currentStroke = [{ x: pos.x, y: pos.y, color: currentColor }];
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.strokeStyle = currentColor;
+      sendMessage({ type: "start", x: pos.x, y: pos.y, color: currentColor });
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
+      const pos = getPos(e);
+      currentStroke.push({ x: pos.x, y: pos.y, color: currentColor });
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      sendMessage({ type: "draw", x: pos.x, y: pos.y, color: currentColor });
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      drawing = false;
+      strokes.push(currentStroke);
+      currentStroke = [];
+      sendMessage({ type: "endStroke" });
+    });
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  </script>
+</body>
+</html>

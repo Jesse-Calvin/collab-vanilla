@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Collaborative Drawing App Launcher</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background: linear-gradient(to right, #ece9e6, #ffffff);
+      padding: 50px;
+    }
+    h1 {
+      margin-bottom: 40px;
+      font-size: 2.5em;
+      color: #333;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      padding: 30px 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 220px;
+      text-align: center;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .card img {
+      height: 60px;
+      margin-bottom: 15px;
+    }
+    .card h3 {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .card a {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 16px;
+      background-color: #007bff;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    .card a:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Collaborative Drawing App</h1>
+  <div class="grid">
+    <div class="card">
+      <img src="https://img.icons8.com/color/48/javascript--v1.png" alt="Vanilla JS Logo" />
+      <h3>Vanilla JS</h3>
+      <a href="file:///C:/Users/PC/jlab-draw-app/frontend/index.html" target="_blank">Open App</a>
+    </div>
+    <div class="card">
+      <img src="https://img.icons8.com/officel/80/react.png" alt="React Logo" />
+      <h3>React</h3>
+      <a href="http://localhost:3000" target="_blank">Open App</a>
+    </div>
+    <div class="card">
+      <img src="https://img.icons8.com/color/48/vue-js.png" alt="Vue Logo" />
+      <h3>Vue.js</h3>
+      <a href="http://localhost:8081" target="_blank">Open App</a>
+    </div>
+    <div class="card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8e/Nextjs-logo.svg" alt="Next.js Logo" style="height:60px;" />
+        <h3>Next.js</h3>
+        <a href="http://localhost:3000" target="_blank">Open App</a>
+      </div>
+      
+  </div>
+</body>
+</html>
